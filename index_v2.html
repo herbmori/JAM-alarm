@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>영상체험과 알람앱</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+</head>
+
+<body>
+    <header>
+        <h1>영상체험과 알람앱 (v2.0)</h1>
+    </header>
+    <main>
+        <section class="theme-selector">
+            <label for="themeSelect">테마관 선택:</label>
+            <select id="themeSelect"></select>
+            <button id="addThemeBtn" style="margin-left: 10px; padding: 5px 10px; cursor: pointer;">테마 추가</button>
+            <button id="deleteThemeBtn"
+                style="margin-left: 10px; background-color: #ff4444; color: white; border: none; padding: 5px 10px; cursor: pointer;">테마
+                삭제</button>
+            <label class="switch">
+                <input type="checkbox" id="themeToggle" />
+                <span class="slider"></span>
+            </label>
+            <span id="toggleLabel">활성</span>
+        </section>
+        <section class="lead-time-selector">
+            <label for="leadTimeSelect">알림 선행 시간 (분):</label>
+            <select id="leadTimeSelect">
+                <option value="2">2분</option>
+                <option value="3">3분</option>
+                <option value="5">5분</option>
+                <option value="6" selected>6분</option>
+                <option value="7">7분</option>
+            </select>
+        </section>
+        <section class="settings-selector"
+            style="margin-bottom: 20px; text-align: center; border-top: 1px solid #333; padding-top: 20px;">
+            <p style="margin-bottom: 15px; font-weight: bold; font-size: 1.1rem; color: #fff;">🔔 알림 설정</p>
+            <div style="display: flex; justify-content: center; gap: 15px;">
+                <button id="soundBtn"
+                    style="background-color: #4CAF50; color: white; padding: 12px 24px; font-size: 1rem; border: none; border-radius: 8px; font-weight: bold;">🔊
+                    소리: 켜짐</button>
+                <button id="vibrationBtn"
+                    style="background-color: #4CAF50; color: white; padding: 12px 24px; font-size: 1rem; border: none; border-radius: 8px; font-weight: bold;">📳
+                    진동: 켜짐</button>
+            </div>
+        </section>
+        <section class="alarm-list">
+            <h2 id="themeTitle"></h2>
+            <ul id="alarmTimes"></ul>
+            <button id="addTimeBtn">시간 추가</button>
+        </section>
+    </main>
+    <div id="alertModal" class="modal hidden">
+        <div class="modal-content">
+            <p id="alertMessage"></p>
+            <button id="snoozeBtn">스누즈 (5분)</button>
+            <button id="stopBtn">끄기</button>
+        </div>
+    </div>
+
+    <iframe id="dummySound" src="about:blank" allow="autoplay" style="display:none"></iframe>
+    <script src="script.js"></script>
+    <script>
+        // 강력 캐시 초기화 및 서비스 워커 업데이트
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                for (let registration of registrations) {
+                    registration.update();
+                }
+            });
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(reg => {
+                    reg.onupdatefound = () => {
+                        const installingWorker = reg.installing;
+                        installingWorker.onstatechange = () => {
+                            if (installingWorker.state === 'installed') {
+                                if (navigator.serviceWorker.controller) {
+                                    // 새 버전 발견 시 강제 리로드
+                                    console.log('New content available; forcing reload.');
+                                    window.location.reload();
+                                }
+                            }
+                        };
+                    };
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

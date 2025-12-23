@@ -62,7 +62,18 @@ const defaultThemes = {
     procion: {
         name: "프로시온",
         enabled: true,
-        times: []
+        times: [
+            { time: "09:30", enabled: true },
+            { time: "10:10", enabled: true },
+            { time: "10:50", enabled: true },
+            { time: "11:30", enabled: true },
+            { time: "13:40", enabled: true },
+            { time: "14:20", enabled: true },
+            { time: "15:00", enabled: true },
+            { time: "15:40", enabled: true },
+            { time: "16:20", enabled: true },
+            { time: "17:00", enabled: true }
+        ]
     },
     geforce: {
         name: "지포스",
@@ -141,12 +152,40 @@ if (themes.aries) { // Aries -> 팀보로봇
 if (migrateTimes(themes)) needsSave = true;
 if (restoreDefaultThemes(themes)) needsSave = true;
 
+// 프로시온 시간 데이터 주입 (비어있을 경우)
+if (themes.procion && themes.procion.times.length === 0) {
+    themes.procion.times = [
+        { time: "09:30", enabled: true },
+        { time: "10:10", enabled: true },
+        { time: "10:50", enabled: true },
+        { time: "11:30", enabled: true },
+        { time: "13:40", enabled: true },
+        { time: "14:20", enabled: true },
+        { time: "15:00", enabled: true },
+        { time: "15:40", enabled: true },
+        { time: "16:20", enabled: true },
+        { time: "17:00", enabled: true }
+    ];
+    needsSave = true;
+}
+
 if (needsSave) {
     saveThemes(themes);
 }
 
 let currentThemeKey = null;
 let alertLeadTime = 6; // minutes before alarm
+let soundEnabled = true;
+let vibrationEnabled = true;
+
+// 설정 로드
+const storedSettings = localStorage.getItem("alarmSettings");
+if (storedSettings) {
+    const parsed = JSON.parse(storedSettings);
+    soundEnabled = parsed.sound !== undefined ? parsed.sound : true;
+    vibrationEnabled = parsed.vibration !== undefined ? parsed.vibration : true;
+}
+
 let alarmTimeouts = {};
 
 // ---------- UI 요소 참조 ----------
@@ -159,6 +198,9 @@ const addTimeBtn = document.getElementById("addTimeBtn");
 const leadTimeSelect = document.getElementById("leadTimeSelect");
 const addThemeBtn = document.getElementById("addThemeBtn");
 const deleteThemeBtn = document.getElementById("deleteThemeBtn");
+const soundBtn = document.getElementById("soundBtn");
+const vibrationBtn = document.getElementById("vibrationBtn");
+const notifyBtn = document.getElementById("notifyBtn");
 const alertModal = document.getElementById("alertModal");
 const alertMessage = document.getElementById("alertMessage");
 const snoozeBtn = document.getElementById("snoozeBtn");
@@ -315,6 +357,66 @@ if (themeToggle) themeToggle.addEventListener("change", () => {
 
 if (addTimeBtn) addTimeBtn.addEventListener("click", addTime);
 
+function updateSettingsUI() {
+    if (soundBtn) {
+        soundBtn.textContent = soundEnabled ? "🔊 소리: 켜짐" : "🔇 소리: 꺼짐";
+        soundBtn.style.backgroundColor = soundEnabled ? "#4CAF50" : "#f44336"; // Green / Red
+    }
+    if (vibrationBtn) {
+        vibrationBtn.textContent = vibrationEnabled ? "📳 진동: 켜짐" : "📳 진동: 꺼짐";
+        vibrationBtn.style.backgroundColor = vibrationEnabled ? "#4CAF50" : "#f44336";
+    }
+}
+updateSettingsUI(); // 초기 상태 반영
+
+if (soundBtn) {
+    soundBtn.addEventListener("click", () => {
+        soundEnabled = !soundEnabled;
+        saveSettings();
+        updateSettingsUI();
+        if (soundEnabled) playBeep();
+    });
+}
+if (vibrationBtn) {
+    vibrationBtn.addEventListener("click", () => {
+        vibrationEnabled = !vibrationEnabled;
+        saveSettings();
+        updateSettingsUI();
+        if (vibrationEnabled && navigator.vibrate) navigator.vibrate(200);
+    });
+}
+
+if (notifyBtn) {
+    notifyBtn.addEventListener("click", () => {
+        if (!("Notification" in window)) {
+            alert("이 브라우저는 알림을 지원하지 않습니다.");
+            return;
+        }
+        Notification.requestPermission().then((permission) => {
+            if (permission === "granted") {
+                notifyBtn.textContent = "🔔 알림 권한 허용됨";
+                notifyBtn.style.backgroundColor = "#4CAF50";
+                new Notification("알림 설정 완료", { body: "이제 워치와 폰으로 알림이 전송됩니다." });
+            } else {
+                notifyBtn.textContent = "🔕 알림 권한 거부됨";
+                notifyBtn.style.backgroundColor = "#ff4444";
+            }
+        });
+    });
+    // 초기 로드시 권한 상태 체크
+    if ("Notification" in window && Notification.permission === "granted") {
+        notifyBtn.textContent = "🔔 알림 권한 허용됨";
+        notifyBtn.style.backgroundColor = "#4CAF50";
+    }
+}
+
+function saveSettings() {
+    localStorage.setItem("alarmSettings", JSON.stringify({
+        sound: soundEnabled,
+        vibration: vibrationEnabled
+    }));
+}
+
 if (leadTimeSelect) leadTimeSelect.addEventListener("change", () => {
     const val = parseInt(leadTimeSelect.value, 10);
     if (!isNaN(val)) {
@@ -384,8 +486,34 @@ function scheduleAlarms() {
 }
 
 function showAlert(timeStr, themeName, themeKey) {
-    alertMessage.textContent = `${themeName} 알람 (${timeStr})이 6분 전에 도착했습니다.`;
+    alertMessage.textContent = `${themeName} 알람 (${timeStr})이 ${alertLeadTime}분 전에 도착했습니다.`;
     alertModal.classList.remove("hidden");
+
+    if (soundEnabled) playBeep();
+    if (vibrationEnabled && navigator.vibrate) {
+        // 500ms 진동, 200ms 쉼, 500ms 진동
+        navigator.vibrate([500, 200, 500]);
+    }
+
+    // 시스템 알림 (워치 연동용)
+    if ("Notification" in window && Notification.permission === "granted") {
+        try {
+            const noti = new Notification(`${themeName} 알람`, {
+                body: `${timeStr} 알람이 도착했습니다! (${alertLeadTime}분 전)`,
+                icon: "https://cdn-icons-png.flaticon.com/512/8832/8832108.png",
+                vibrate: [500, 200, 500, 200, 500],
+                tag: 'alarm-notify',
+                renotify: true,
+                requireInteraction: true
+            });
+            noti.onclick = function () {
+                window.focus();
+                this.close();
+            };
+        } catch (e) {
+            console.error("시스템 알림 전송 실패", e);
+        }
+    }
 
     // 스누즈 핸들러 (5분 후 재알림)
     snoozeBtn.onclick = () => {
@@ -419,4 +547,31 @@ try {
     console.error("Initialization failed:", e);
     alert("앱 초기화 중 오류가 발생했습니다. 로컬 데이터를 초기화하시겠습니까?");
     // 필요 시 localStorage.clear() 등의 복구 로직 추가 가능
+}
+
+
+// Web Audio API Context
+let audioCtx = null;
+function playBeep() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // 880Hz (High)
+    oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.5); // Drop to 440Hz
+
+    gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.5);
 }

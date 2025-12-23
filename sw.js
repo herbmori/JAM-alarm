@@ -1,5 +1,5 @@
 // sw.js - 서비스 워커 (Service Worker)
-const CACHE_NAME = "alarm-app-v1";
+const CACHE_NAME = "alarm-app-v2";
 const ASSETS_TO_CACHE = [
     "./",
     "./index.html",
