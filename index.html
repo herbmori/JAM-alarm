@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>영상체험과 알람앱</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+</head>
+
+<body>
+    <header>
+        <h1>영상체험과 알람앱</h1>
+    </header>
+    <main>
+        <section class="theme-selector">
+            <label for="themeSelect">테마관 선택:</label>
+            <select id="themeSelect"></select>
+            <button id="addThemeBtn" style="margin-left: 10px; padding: 5px 10px; cursor: pointer;">테마 추가</button>
+            <button id="deleteThemeBtn"
+                style="margin-left: 10px; background-color: #ff4444; color: white; border: none; padding: 5px 10px; cursor: pointer;">테마
+                삭제</button>
+            <label class="switch">
+                <input type="checkbox" id="themeToggle" />
+                <span class="slider"></span>
+            </label>
+            <span id="toggleLabel">활성</span>
+        </section>
+        <section class="lead-time-selector">
+            <label for="leadTimeSelect">알림 선행 시간 (분):</label>
+            <select id="leadTimeSelect">
+                <option value="2">2분</option>
+                <option value="3">3분</option>
+                <option value="5">5분</option>
+                <option value="6" selected>6분</option>
+                <option value="7">7분</option>
+            </select>
+        </section>
+        <section class="alarm-list">
+            <h2 id="themeTitle"></h2>
+            <ul id="alarmTimes"></ul>
+            <button id="addTimeBtn">시간 추가</button>
+        </section>
+    </main>
+    <div id="alertModal" class="modal hidden">
+        <div class="modal-content">
+            <p id="alertMessage"></p>
+            <button id="snoozeBtn">스누즈 (5분)</button>
+            <button id="stopBtn">끄기</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((reg) => console.log('Service Worker Registered', reg))
+                    .catch((err) => console.log('Service Worker Registration Failed', err));
+            });
+        }
+    </script>
+</body>
+
+</html>
